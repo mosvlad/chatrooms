@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tornado Messenger</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- App Header -->
+        <header class="app-header">
+            <div class="app-brand">
+                <div class="app-logo">
+                    <i class="fas fa-bolt" style="color: var(--primary-color); font-size: 1.5rem;"></i>
+                </div>
+                <h1 class="app-name">Tornado Chat</h1>
+            </div>
+
+            <div class="app-header-actions">
+                {% if logged_in %}
+                    <div class="user-info">
+                        <span class="badge badge-success">
+                            <i class="fas fa-circle text-sm mr-1"></i> Online
+                        </span>
+                        <span class="ml-2 font-medium">{{ username }}</span>
+                    </div>
+                    <button id="logout-btn" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                    </button>
+                {% else %}
+                    <div id="anonymous-controls">
+                        <input type="text" id="custom-username" class="form-input" placeholder="Guest nickname">
+                    </div>
+                    <button id="login-btn" class="btn btn-primary btn-sm">Login</button>
+                    <button id="register-btn" class="btn btn-secondary btn-sm">Register</button>
+                {% end %}
+                <button id="mobile-menu-btn" class="chat-header-menu hidden">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- App Main -->
+        <div class="app-main">
+            <!-- Sidebar -->
+            <div class="app-sidebar">
+                <div class="sidebar-header">
+                    <div class="sidebar-tabs">
+                        <div class="sidebar-tab active" data-tab="rooms">Rooms</div>
+                        {% if logged_in %}
+                        <div class="sidebar-tab" data-tab="dms">Direct Messages</div>
+                        {% end %}
+                    </div>
+                </div>
+
+                <div class="sidebar-content">
+                    <!-- Rooms Tab -->
+                    <div class="sidebar-tab-content active" id="rooms-tab">
+                        <div class="sidebar-section">
+                            <div class="sidebar-section-header">
+                                <h3 class="sidebar-section-title">Public Rooms</h3>
+                                {% if logged_in %}
+                                <button id="create-room-btn" class="sidebar-add-button">+</button>
+                                {% end %}
+                            </div>
+                            <div id="rooms-list" class="rooms-list"></div>
+                        </div>
+
+                        {% if logged_in %}
+                        <div class="sidebar-section">
+                            <div class="sidebar-section-header">
+                                <h3 class="sidebar-section-title">Private Rooms</h3>
+                            </div>
+                            <div id="private-rooms-list" class="rooms-list"></div>
+                        </div>
+                        {% end %}
+                    </div>
+
+                    <!-- Direct Messages Tab -->
+                    {% if logged_in %}
+                    <div class="sidebar-tab-content" id="dms-tab">
+                        <div class="sidebar-section">
+                            <div class="sidebar-section-header">
+                                <h3 class="sidebar-section-title">Users</h3>
+                            </div>
+                            <div id="users-list" class="users-list"></div>
+                        </div>
+                    </div>
+                    {% end %}
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="chat-area">
+                <div class="chat-header">
+                    <div class="chat-header-title">
+                        <div class="chat-header-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <div>
+                            <h2 id="current-room-name" class="chat-header-name">Public Room</h2>
+                            <div class="chat-header-meta">
+                                <span id="room-members-count">0 members</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-header-actions">
+                        {% if logged_in %}
+                        <button id="add-member-btn" class="chat-header-action hidden">
+                            <i class="fas fa-user-plus"></i>
+                        </button>
+                        {% end %}
+                        <button id="mobile-sidebar-btn" class="chat-header-action">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="messages-container" class="messages-container"></div>
+
+                <div class="chat-composer">
+                    <div id="image-preview" class="image-preview hidden">
+                        <button id="remove-image-btn" class="remove-image-button">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="composer-container">
+                        <div class="composer-actions">
+                            <input type="file" id="image-input" accept="image/*">
+                            <button id="upload-image-btn" class="composer-action">
+                                <i class="fas fa-image"></i>
+                            </button>
+                        </div>
+
+                        <div class="composer-input">
+                            <textarea id="message-input" placeholder="Type a message..." rows="1"></textarea>
+                        </div>
+
+                        <button id="send-btn" class="send-button">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="image-lightbox" class="lightbox">
+        <button class="lightbox-close">&times;</button>
+        <img id="lightbox-img" class="lightbox-img">
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal-backdrop">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 class="modal-title">Login</h2>
+                <button class="modal-close close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="login-username" class="form-label">Username</label>
+                        <input type="text" id="login-username" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password" class="form-label">Password</label>
+                        <input type="password" id="login-password" class="form-input" required>
+                    </div>
+                    <p id="login-error" class="form-error"></p>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close">Cancel</button>
+                <button type="submit" form="login-form" class="btn btn-primary">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="register-modal" class="modal-backdrop">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 class="modal-title">Register</h2>
+                <button class="modal-close close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="register-form">
+                    <div class="form-group">
+                        <label for="register-username" class="form-label">Username</label>
+                        <input type="text" id="register-username" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password" class="form-label">Password</label>
+                        <input type="password" id="register-password" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-password" class="form-label">Confirm Password</label>
+                        <input type="password" id="confirm-password" class="form-input" required>
+                    </div>
+                    <p id="register-error" class="form-error"></p>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close">Cancel</button>
+                <button type="submit" form="register-form" class="btn btn-primary">Register</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Room Modal -->
+    <div id="create-room-modal" class="modal-backdrop">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 class="modal-title">Create Room</h2>
+                <button class="modal-close close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="create-room-form">
+                    <div class="form-group">
+                        <label for="room-name" class="form-label">Room Name</label>
+                        <input type="text" id="room-name" class="form-input" required>
+                    </div>
+                    <div class="form-group form-checkbox">
+                        <input type="checkbox" id="is-private">
+                        <label for="is-private">Private Room</label>
+                    </div>
+                    <p id="create-room-error" class="form-error"></p>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close">Cancel</button>
+                <button type="submit" form="create-room-form" class="btn btn-primary">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div id="add-member-modal" class="modal-backdrop">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Member</h2>
+                <button class="modal-close close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="add-member-form">
+                    <div class="form-group">
+                        <label for="member-username" class="form-label">Username</label>
+                        <input type="text" id="member-username" class="form-input" required>
+                    </div>
+                    <p id="add-member-error" class="form-error"></p>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close">Cancel</button>
+                <button type="submit" form="add-member-form" class="btn btn-primary">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates for dynamic content -->
+    <template id="room-item-template">
+        <div class="room-item">
+            <div class="room-icon"></div>
+            <div class="room-details">
+                <div class="room-name"></div>
+            </div>
+        </div>
+    </template>
+
+    <template id="user-item-template">
+        <div class="user-item">
+            <div class="user-avatar"></div>
+            <div class="user-details">
+                <div class="user-name"></div>
+                <div class="user-meta">
+                    <span class="user-status"></span>
+                    <span class="user-status-text">Online</span>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="message-group-template">
+        <div class="message-group">
+            <!-- Messages will be added here -->
+        </div>
+    </template>
+
+    <template id="message-template">
+        <div class="message">
+            <div class="message-header">
+                <span class="message-sender"></span>
+                <span class="message-time"></span>
+            </div>
+            <div class="message-content"></div>
+        </div>
+    </template>
+
+    <template id="date-divider-template">
+        <div class="date-divider"></div>
+    </template>
+
+    <template id="empty-state-template">
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="fas fa-comments"></i>
+            </div>
+            <h3 class="empty-state-title"></h3>
+            <p class="empty-state-description"></p>
+        </div>
+    </template>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
