@@ -2,7 +2,8 @@
 
 A real-time messaging application built with Tornado, SQLite, and WebSockets. Tornado Chat features a modern UI, secure user authentication, public and private rooms, direct messaging, and image sharing capabilities.
 
-![Tornado Chat Screenshot](screenshot.png)
+![image](https://github.com/user-attachments/assets/6acf75dd-6dc5-4bb7-a591-08a8f32064e2)
+
 
 ## Features
 
